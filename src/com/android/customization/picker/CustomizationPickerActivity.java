@@ -68,9 +68,11 @@ import com.android.wallpaper.module.Injector;
 import com.android.wallpaper.module.InjectorProvider;
 import com.android.wallpaper.module.UserEventLogger;
 import com.android.wallpaper.module.WallpaperPreferences;
+import com.android.wallpaper.picker.AppbarFragment.AppbarFragmentHost;
 import com.android.wallpaper.picker.BottomActionBarFragment;
 import com.android.wallpaper.picker.CategoryFragment;
 import com.android.wallpaper.picker.CategoryFragment.CategoryFragmentHost;
+import com.android.wallpaper.picker.CategorySelectorFragment;
 import com.android.wallpaper.picker.FragmentTransactionChecker;
 import com.android.wallpaper.picker.MyPhotosStarter;
 import com.android.wallpaper.picker.MyPhotosStarter.PermissionChangedListener;
@@ -91,7 +93,7 @@ import java.util.Map;
  *  Fragments providing customization options.
  */
 public class CustomizationPickerActivity extends FragmentActivity implements WallpapersUiContainer,
-        CategoryFragmentHost, CustomizationFragmentHost,
+        AppbarFragmentHost, CategoryFragmentHost, CustomizationFragmentHost,
         ThemeFragmentHost, GridFragmentHost,
         ClockFragmentHost, BottomActionBarHost, FragmentTransactionChecker {
 
@@ -435,8 +437,11 @@ public class CustomizationPickerActivity extends FragmentActivity implements Wal
 
     @Nullable
     @Override
-    public CategoryFragment getCategoryFragment() {
-        return mWallpaperCategoryFragment;
+    public CategorySelectorFragment getCategorySelectorFragment() {
+        if (mWallpaperCategoryFragment == null) {
+            return null;
+        }
+        return mWallpaperCategoryFragment.getCategorySelectorFragment();
     }
 
     @Override
@@ -508,6 +513,16 @@ public class CustomizationPickerActivity extends FragmentActivity implements Wal
     @Override
     public boolean isSafeToCommitFragmentTransaction() {
         return mIsSafeToCommitFragmentTransaction;
+    }
+
+    @Override
+    public void onUpArrowPressed() {
+        onBackPressed();
+    }
+
+    @Override
+    public boolean isUpArrowSupported() {
+        return true;
     }
 
     /**
