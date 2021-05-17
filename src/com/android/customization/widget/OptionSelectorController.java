@@ -29,6 +29,8 @@ import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.TextView;
 
+import androidx.annotation.Dimension;
+import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -63,26 +65,33 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
         void onOptionSelected(CustomizationOption selected);
     }
 
+    @IntDef({CheckmarkStyle.NONE, CheckmarkStyle.CORNER, CheckmarkStyle.CENTER})
+    public @interface CheckmarkStyle {
+        int NONE = 0;
+        int CORNER = 1;
+        int CENTER = 2;
+    }
+
     private final RecyclerView mContainer;
     private final List<T> mOptions;
     private final boolean mUseGrid;
-    private final boolean mShowCheckmark;
+    @CheckmarkStyle private final int mCheckmarkStyle;
 
     private final Set<OptionSelectedListener> mListeners = new HashSet<>();
     private RecyclerView.Adapter<TileViewHolder> mAdapter;
-    private CustomizationOption mSelectedOption;
-    private CustomizationOption mAppliedOption;
+    private T mSelectedOption;
+    private T mAppliedOption;
 
     public OptionSelectorController(RecyclerView container, List<T> options) {
-        this(container, options, true, true);
+        this(container, options, true, CheckmarkStyle.CORNER);
     }
 
     public OptionSelectorController(RecyclerView container, List<T> options,
-            boolean useGrid, boolean showCheckmark) {
+            boolean useGrid, @CheckmarkStyle int checkmarkStyle) {
         mContainer = container;
         mOptions = options;
         mUseGrid = useGrid;
-        mShowCheckmark = showCheckmark;
+        mCheckmarkStyle = checkmarkStyle;
     }
 
     public void addListener(OptionSelectedListener listener) {
@@ -93,7 +102,10 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
         mListeners.remove(listener);
     }
 
-    public void setSelectedOption(CustomizationOption option) {
+    /**
+     * Mark the given option as selected
+     */
+    public void setSelectedOption(T option) {
         if (!mOptions.contains(option)) {
             throw new IllegalArgumentException("Invalid option");
         }
@@ -104,15 +116,22 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
     }
 
     /**
+     * @return whether this controller contains the given option
+     */
+    public boolean containsOption(T option) {
+        return mOptions.contains(option);
+    }
+
+    /**
      * Mark an option as the one which is currently applied on the device. This will result in a
      * check being displayed in the lower-right corner of the corresponding ViewHolder.
      * @param option
      */
-    public void setAppliedOption(CustomizationOption option) {
+    public void setAppliedOption(T option) {
         if (!mOptions.contains(option)) {
             throw new IllegalArgumentException("Invalid option");
         }
-        CustomizationOption lastAppliedOption = mAppliedOption;
+        T lastAppliedOption = mAppliedOption;
         mAppliedOption = option;
         mAdapter.notifyItemChanged(mOptions.indexOf(option));
         if (lastAppliedOption != null) {
@@ -120,7 +139,7 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
         }
     }
 
-    private void updateActivatedStatus(CustomizationOption option, boolean isActivated) {
+    private void updateActivatedStatus(T option, boolean isActivated) {
         int index = mOptions.indexOf(option);
         if (index < 0) {
             return;
@@ -132,14 +151,14 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
             if (holder instanceof TileViewHolder) {
                 TileViewHolder tileHolder = (TileViewHolder) holder;
                 if (isActivated) {
-                    if (option == mAppliedOption && mShowCheckmark) {
+                    if (option == mAppliedOption && mCheckmarkStyle != CheckmarkStyle.NONE) {
                         tileHolder.setContentDescription(mContainer.getContext(), option,
                             R.string.option_applied_previewed_description);
                     } else {
                         tileHolder.setContentDescription(mContainer.getContext(), option,
                             R.string.option_previewed_description);
                     }
-                } else if (option == mAppliedOption && mShowCheckmark) {
+                } else if (option == mAppliedOption && mCheckmarkStyle != CheckmarkStyle.NONE) {
                     tileHolder.setContentDescription(mContainer.getContext(), option,
                         R.string.option_applied_description);
                 } else {
@@ -185,7 +204,7 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
 
             @Override
             public void onBindViewHolder(@NonNull TileViewHolder holder, int position) {
-                CustomizationOption option = mOptions.get(position);
+                T option = mOptions.get(position);
                 if (option.isActive(manager)) {
                     mAppliedOption = option;
                     if (mSelectedOption == null) {
@@ -195,40 +214,30 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
                 if (holder.labelView != null) {
                     holder.labelView.setText(option.getTitle());
                 }
-                option.bindThumbnailTile(holder.tileView);
                 holder.itemView.setActivated(option.equals(mSelectedOption));
+                option.bindThumbnailTile(holder.tileView);
                 holder.itemView.setOnClickListener(view -> setSelectedOption(option));
 
-                if (mShowCheckmark && option.equals(mAppliedOption)) {
-                    Resources res = mContainer.getContext().getResources();
-                    Drawable checkmark = res.getDrawable(R.drawable.check_circle_accent_24dp,
-                            mContainer.getContext().getTheme());
-                    Drawable frame = holder.tileView.getForeground();
-                    Drawable[] layers = {frame, checkmark};
-                    if (frame == null) {
-                        layers = new Drawable[]{checkmark};
-                    }
-                    LayerDrawable checkedFrame = new LayerDrawable(layers);
-
-                    // Position at lower right
-                    int idx = layers.length - 1;
-                    int checkSize = (int) res.getDimension(R.dimen.check_size);
-                    int checkOffset = (int) res.getDimensionPixelOffset(R.dimen.check_offset);
-                    checkedFrame.setLayerGravity(idx, Gravity.BOTTOM | Gravity.RIGHT);
-                    checkedFrame.setLayerWidth(idx, checkSize);
-                    checkedFrame.setLayerHeight(idx, checkSize);
-                    checkedFrame.setLayerInsetBottom(idx, checkOffset);
-                    checkedFrame.setLayerInsetRight(idx, checkOffset);
-                    holder.tileView.setForeground(checkedFrame);
-
-                    // Initialize the currently applied option
-                    holder.setContentDescription(mContainer.getContext(), option,
-                        R.string.option_applied_previewed_description);
+                Resources res = mContainer.getContext().getResources();
+                if (mCheckmarkStyle == CheckmarkStyle.CORNER && option.equals(mAppliedOption)) {
+                    drawCheckmark(option, holder,
+                            res.getDrawable(R.drawable.check_circle_accent_24dp,
+                                    mContainer.getContext().getTheme()),
+                            Gravity.BOTTOM | Gravity.RIGHT,
+                            res.getDimensionPixelSize(R.dimen.check_size),
+                            res.getDimensionPixelOffset(R.dimen.check_offset));
+                } else if (mCheckmarkStyle == CheckmarkStyle.CENTER
+                        && option.equals(mAppliedOption)) {
+                    drawCheckmark(option, holder,
+                            res.getDrawable(R.drawable.check_circle_grey_large,
+                                    mContainer.getContext().getTheme()),
+                            Gravity.CENTER, res.getDimensionPixelSize(R.dimen.center_check_size),
+                            0);
                 } else if (option.equals(mAppliedOption)) {
                     // Initialize with "previewed" description if we don't show checkmark
                     holder.setContentDescription(mContainer.getContext(), option,
                         R.string.option_previewed_description);
-                } else if (mShowCheckmark) {
+                } else if (mCheckmarkStyle != CheckmarkStyle.NONE) {
                     holder.tileView.setForeground(null);
                 }
             }
@@ -236,6 +245,30 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
             @Override
             public int getItemCount() {
                 return mOptions.size();
+            }
+
+            private void drawCheckmark(CustomizationOption<?> option, TileViewHolder holder,
+                    Drawable checkmark, int gravity, @Dimension int checkSize,
+                    @Dimension int checkOffset) {
+                Drawable frame = holder.tileView.getForeground();
+                Drawable[] layers = {frame, checkmark};
+                if (frame == null) {
+                    layers = new Drawable[]{checkmark};
+                }
+                LayerDrawable checkedFrame = new LayerDrawable(layers);
+
+                // Position according to the given gravity and offset
+                int idx = layers.length - 1;
+                checkedFrame.setLayerGravity(idx, gravity);
+                checkedFrame.setLayerWidth(idx, checkSize);
+                checkedFrame.setLayerHeight(idx, checkSize);
+                checkedFrame.setLayerInsetBottom(idx, checkOffset);
+                checkedFrame.setLayerInsetRight(idx, checkOffset);
+                holder.tileView.setForeground(checkedFrame);
+
+                // Initialize the currently applied option
+                holder.setContentDescription(mContainer.getContext(), option,
+                        R.string.option_applied_previewed_description);
             }
         };
 
@@ -277,8 +310,6 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
                 ((GridLayoutManager) mContainer.getLayoutManager()).setSpanCount(numColumns);
             }
 
-            int containerSidePadding = (extraSpace / (numColumns + 1)) / 2;
-            mContainer.setPaddingRelative(containerSidePadding, 0, containerSidePadding, 0);
             mContainer.setOverScrollMode(View.OVER_SCROLL_NEVER);
             return;
         }
@@ -287,7 +318,7 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
         if (extraSpace >= 0) {
             mContainer.setOverScrollMode(View.OVER_SCROLL_NEVER);
         }
-        int itemSideMargin =  res.getDimensionPixelOffset(R.dimen.option_tile_margin_horizontal);
+        int itemSideMargin = res.getDimensionPixelOffset(R.dimen.option_tile_margin_horizontal);
         int defaultTotalPadding = itemSideMargin * (mAdapter.getItemCount() * 2 + 2);
         if (extraSpace > defaultTotalPadding) {
             int spaceBetweenItems = extraSpace / (mAdapter.getItemCount() + 1);
@@ -306,7 +337,7 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
         if (mListeners.isEmpty()) {
             return;
         }
-        CustomizationOption option = mSelectedOption;
+        T option = mSelectedOption;
         Set<OptionSelectedListener> iterableListeners = new HashSet<>(mListeners);
         for (OptionSelectedListener listener : iterableListeners) {
             listener.onOptionSelected(option);
@@ -332,7 +363,7 @@ public class OptionSelectorController<T extends CustomizationOption<T>> {
          * @param option The customization option
          * @param id Resource ID of the string to use for the content description
          */
-        public void setContentDescription(Context context, CustomizationOption option, int id) {
+        public void setContentDescription(Context context, CustomizationOption<?> option, int id) {
             title = option.getTitle();
             if (TextUtils.isEmpty(title) && tileView != null) {
                 title = tileView.getContentDescription();

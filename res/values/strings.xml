@@ -16,7 +16,7 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- The name of this application, a theme picker. [CHAR LIMIT=50] -->
-    <string name="app_name">Styles &amp; wallpapers</string>
+    <string name="app_name">Wallpaper &amp; style</string>
 
     <!-- Title of a section of the customization picker where the user can select a Theme for the
         device. [CHAR LIMIT=15] -->
@@ -28,7 +28,7 @@
 
     <!-- Title of a section of the customization picker where the user can select a Grid size for
         the home screen. [CHAR LIMIT=15] -->
-    <string name="grid_title">Grid</string>
+    <string name="grid_title">App grid</string>
 
     <!-- Label for a button that allows the user to apply the currently selected Theme.
         [CHAR LIMIT=20] -->

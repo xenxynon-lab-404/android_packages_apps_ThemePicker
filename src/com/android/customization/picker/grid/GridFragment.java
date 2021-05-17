@@ -22,7 +22,6 @@ import static com.android.customization.picker.grid.GridFullPreviewFragment.EXTR
 import static com.android.customization.picker.grid.GridFullPreviewFragment.EXTRA_WALLPAPER_INFO;
 import static com.android.wallpaper.widget.BottomActionBar.BottomAction.APPLY;
 
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -51,7 +50,6 @@ import com.android.wallpaper.model.WallpaperInfo;
 import com.android.wallpaper.module.CurrentWallpaperInfoFactory;
 import com.android.wallpaper.module.InjectorProvider;
 import com.android.wallpaper.picker.AppbarFragment;
-import com.android.wallpaper.util.ActivityUtils;
 import com.android.wallpaper.widget.BottomActionBar;
 
 import com.bumptech.glide.Glide;
@@ -69,13 +67,6 @@ public class GridFragment extends AppbarFragment {
             "GridFragment.bottomActionBarVisible";
 
     private static final String TAG = "GridFragment";
-
-    /**
-     * Interface to be implemented by an Activity hosting a {@link GridFragment}
-     */
-    public interface GridFragmentHost {
-        GridOptionsManager getGridOptionsManager();
-    }
 
     public static GridFragment newInstance(CharSequence title) {
         GridFragment fragment = new GridFragment();
@@ -113,28 +104,34 @@ public class GridFragment extends AppbarFragment {
         }
     };
 
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        mGridManager = ((GridFragmentHost) context).getGridOptionsManager();
-        mEventLogger = (ThemesUserEventLogger)
-                InjectorProvider.getInjector().getUserEventLogger(context);
-    }
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
             @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(
                 R.layout.fragment_grid_picker, container, /* attachToRoot */ false);
-        setUpToolbar(view, ActivityUtils.isLaunchedFromSettings(getActivity().getIntent()));
+        setUpToolbar(view);
         mContent = view.findViewById(R.id.content_section);
         mOptionsContainer = view.findViewById(R.id.options_container);
         mLoading = view.findViewById(R.id.loading_indicator);
         mError = view.findViewById(R.id.error_section);
 
+        // For nav bar edge-to-edge effect.
+        view.setOnApplyWindowInsetsListener((v, windowInsets) -> {
+            v.setPadding(
+                    v.getPaddingLeft(),
+                    v.getPaddingTop(),
+                    v.getPaddingRight(),
+                    windowInsets.getSystemWindowInsetBottom());
+            return windowInsets.consumeSystemWindowInsets();
+        });
+
         // Clear memory cache whenever grid fragment view is being loaded.
         Glide.get(getContext()).clearMemory();
+
+        mGridManager = GridOptionsManager.get(getContext());
+        mEventLogger = (ThemesUserEventLogger) InjectorProvider.getInjector()
+                .getUserEventLogger(getContext());
         setUpOptions(savedInstanceState);
 
         SurfaceView wallpaperSurface = view.findViewById(R.id.wallpaper_preview_surface);
@@ -203,7 +200,9 @@ public class GridFragment extends AppbarFragment {
             @Override
             public void onOptionsLoaded(List<GridOption> options) {
                 mLoading.hide();
-                mOptionsController = new OptionSelectorController<>(mOptionsContainer, options);
+                mOptionsController = new OptionSelectorController<>(
+                        mOptionsContainer, options, true,
+                        OptionSelectorController.CheckmarkStyle.CENTER);
                 mOptionsController.initOptions(mGridManager);
 
                 // Find the selected Grid option.
@@ -233,7 +232,7 @@ public class GridFragment extends AppbarFragment {
                 }
                 showError();
             }
-        }, false);
+        }, /*reload= */ true);
     }
 
     private GridOption getActiveOption(List<GridOption> options) {

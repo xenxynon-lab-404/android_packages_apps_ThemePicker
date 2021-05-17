@@ -44,7 +44,6 @@ import com.android.customization.model.clock.Clockface;
 import com.android.customization.model.clock.ContentProviderClockProvider;
 import com.android.customization.model.grid.GridOption;
 import com.android.customization.model.grid.GridOptionsManager;
-import com.android.customization.model.grid.LauncherGridOptionsProvider;
 import com.android.customization.model.theme.DefaultThemeProvider;
 import com.android.customization.model.theme.OverlayManagerCompat;
 import com.android.customization.model.theme.ThemeBundle;
@@ -55,7 +54,6 @@ import com.android.customization.module.ThemesUserEventLogger;
 import com.android.customization.picker.clock.ClockFragment;
 import com.android.customization.picker.clock.ClockFragment.ClockFragmentHost;
 import com.android.customization.picker.grid.GridFragment;
-import com.android.customization.picker.grid.GridFragment.GridFragmentHost;
 import com.android.customization.picker.theme.ThemeFragment;
 import com.android.customization.picker.theme.ThemeFragment.ThemeFragmentHost;
 import com.android.customization.widget.NoTintDrawableWrapper;
@@ -79,6 +77,7 @@ import com.android.wallpaper.picker.MyPhotosStarter.PermissionChangedListener;
 import com.android.wallpaper.picker.TopLevelPickerActivity;
 import com.android.wallpaper.picker.WallpaperPickerDelegate;
 import com.android.wallpaper.picker.WallpapersUiContainer;
+import com.android.wallpaper.util.ActivityUtils;
 import com.android.wallpaper.util.DeepLinkUtils;
 import com.android.wallpaper.widget.BottomActionBar;
 import com.android.wallpaper.widget.BottomActionBar.BottomActionBarHost;
@@ -93,8 +92,7 @@ import java.util.Map;
  *  Fragments providing customization options.
  */
 public class CustomizationPickerActivity extends FragmentActivity implements WallpapersUiContainer,
-        AppbarFragmentHost, CategoryFragmentHost, CustomizationFragmentHost,
-        ThemeFragmentHost, GridFragmentHost,
+        AppbarFragmentHost, CategoryFragmentHost, CustomizationFragmentHost, ThemeFragmentHost,
         ClockFragmentHost, BottomActionBarHost, FragmentTransactionChecker {
 
     public static final String WALLPAPER_FLAVOR_EXTRA =
@@ -241,7 +239,7 @@ public class CustomizationPickerActivity extends FragmentActivity implements Wal
 
     private boolean supportsCustomizationExtended() {
         CustomizationInjector injector = (CustomizationInjector) InjectorProvider.getInjector();
-        return injector.supportsCustomizationExtended();
+        return injector.supportsCustomizationExtended(this);
     }
 
     private void initSections() {
@@ -280,10 +278,7 @@ public class CustomizationPickerActivity extends FragmentActivity implements Wal
             Log.d(TAG, "ClockManager not available, removing Clock section");
         }
         //Grid
-        GridOptionsManager gridManager = new GridOptionsManager(
-                new LauncherGridOptionsProvider(this,
-                        getString(R.string.grid_control_metadata_name)),
-                eventLogger);
+        GridOptionsManager gridManager = GridOptionsManager.get(this);
         if (gridManager.isAvailable()) {
             mSections.put(R.id.nav_grid, new GridSection(R.id.nav_grid, gridManager));
         } else {
@@ -416,11 +411,6 @@ public class CustomizationPickerActivity extends FragmentActivity implements Wal
     }
 
     @Override
-    public boolean isNavigationTabsContained() {
-        return true;
-    }
-
-    @Override
     public void fetchCategories() {
         mDelegate.initialize(!mDelegate.getCategoryProvider().isCategoriesFetched());
     }
@@ -474,12 +464,6 @@ public class CustomizationPickerActivity extends FragmentActivity implements Wal
     }
 
     @Override
-    public GridOptionsManager getGridOptionsManager() {
-        CustomizationSection section = mSections.get(R.id.nav_grid);
-        return section == null ? null : (GridOptionsManager) section.getCustomizationManager();
-    }
-
-    @Override
     public ThemeManager getThemeManager() {
         CustomizationSection section = mSections.get(R.id.nav_theme);
         return section == null ? null : (ThemeManager) section.getCustomizationManager();
@@ -517,7 +501,27 @@ public class CustomizationPickerActivity extends FragmentActivity implements Wal
 
     @Override
     public void onUpArrowPressed() {
-        onBackPressed();
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+        if (fragment instanceof BottomActionBarFragment
+                && ((BottomActionBarFragment) fragment).onBackPressed()) {
+            return;
+        }
+
+        // For wallpaper tab, since it had child fragment.
+        if (mWallpaperCategoryFragment != null && mWallpaperCategoryFragment.popChildFragment()) {
+            return;
+        }
+
+        if (getSupportFragmentManager().popBackStackImmediate()) {
+            return;
+        }
+
+        if (!ActivityUtils.isLaunchedFromSettings(getIntent())) {
+            Intent intent = new Intent(Settings.ACTION_SETTINGS);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+        }
+        finish();
     }
 
     @Override
