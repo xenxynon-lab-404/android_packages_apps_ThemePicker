@@ -43,8 +43,7 @@ genrule {
     out: ["ThemePicker_res.zip"],
     cmd: "INPUTS=($(in)) && "
         + "RES_DIR=$$(dirname $$(dirname $${INPUTS[0]})) && "
-        + "$(location soong_zip) -o $(out) -C $$RES_DIR -D $$RES_DIR && "
-        + "cp $(out) ."
+        + "$(location soong_zip) -o $(out) -C $$RES_DIR -D $$RES_DIR"
 }
 
 //
@@ -64,6 +63,8 @@ android_app {
         ":ThemePicker_srcs",
         "src_override/**/*.java",
         "src_override/**/*.kt",
+        "src_overridecustom/**/*.java",
+        "src_overridecustom/**/*.kt",
     ],
 
     use_embedded_native_libs: true,
