@@ -13,19 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.customization.util;
+package com.android.customization.picker.grid;
 
 import android.content.Context;
-import android.content.Intent;
+import android.util.AttributeSet;
 
-/** Util class for launching activity. */
-public class LaunchUtils {
+import androidx.annotation.Nullable;
 
-    /** Goes to Launcher's Home. */
-    public static void launchHome(Context context) {
-        Intent launcherIntent = new Intent(Intent.ACTION_MAIN);
-        launcherIntent.addCategory(Intent.CATEGORY_HOME);
-        launcherIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        context.startActivity(launcherIntent);
+import com.android.wallpaper.picker.SectionView;
+
+/** The {@link SectionView} for app grid. */
+public final class GridSectionView extends SectionView {
+
+    public GridSectionView(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
     }
 }
