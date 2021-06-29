@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.customization.picker.grid;
+package com.android.customization.picker;
 
-import android.content.Context;
-import android.util.AttributeSet;
+import com.android.customization.model.CustomizationManager;
 
-import androidx.annotation.Nullable;
+/**
+ * Interface to be implemented by an Activity hosting any Customization Fragment
+ */
+public interface CustomizationFragmentHost {
 
-import com.android.wallpaper.picker.SectionView;
-
-/** The {@link SectionView} for app grid. */
-public final class GridSectionView extends SectionView {
-
-    public GridSectionView(Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
-    }
+    /**
+     * Gets the CustomizationManager manager for the given section
+     * @return the {@link CustomizationManager}
+     */
+    CustomizationManager<?> getCustomizationManager(int sectionId);
 }
