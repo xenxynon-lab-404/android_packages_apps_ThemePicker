@@ -17,7 +17,7 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name" msgid="1647136562008520313">"Fons de pantalla i estil"</string>
+    <string name="app_name" msgid="1647136562008520313">"Estil i fons de pantalla"</string>
     <string name="theme_title" msgid="2144932106319405101">"Estil"</string>
     <string name="clock_title" msgid="2126046720254613991">"Rellotge"</string>
     <string name="grid_title" msgid="1688173478777254123">"Quadrícula d\'apps"</string>
@@ -81,5 +81,6 @@
     <string name="mode_title" msgid="2394873501427436055">"Tema fosc"</string>
     <string name="mode_disabled_msg" msgid="9196245518435936512">"Desactivat temporalment per Estalvi de bateria"</string>
     <string name="themed_icon_title" msgid="7312460430471956558">"Icones temàtiques"</string>
+    <string name="beta_title" msgid="8703819523760746458">"Beta"</string>
     <string name="gird_picker_entry_content_description" msgid="9087651470212293439">"Canvia la quadrícula d\'aplicacions"</string>
 </resources>
